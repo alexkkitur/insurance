@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "hcov_backend": {
+      "main": "src/hcov_backend/main.mo",
+      "type": "motoko"
+    },
+    "hcov_frontend": {
+      "dependencies": [
+        "hcov_backend"
+      ],
+      "source": [
+        "src/hcov_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "hcov_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

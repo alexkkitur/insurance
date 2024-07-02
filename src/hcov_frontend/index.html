@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Wallet Dashboard</title>
+    <link rel="stylesheet" href="src/main.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo">
+                <img src="logo.png" alt="Logo">
+                <span>Medical Wallet</span>
+            </div>
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#transact">Transact</a></li>
+                <li><a href="#donate">Donate</a></li>
+                <li><a href="#beneficiaries">Beneficiaries</a></li>
+                <li><a href="#savings">Savings</a></li>
+                <li><a href="#balance">Check Balance</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="dashboard" class="section active">
+                <h1>Welcome to Your Medical Wallet</h1>
+                <p>Manage your medical expenses and donations efficiently.</p>
+            </section>
+            <section id="transact" class="section">
+                <h2>Transact</h2>
+                <form id="transact-form">
+                    <label for="amount">Amount (ICP):</label>
+                    <input type="number" id="amount" name="amount" required>
+                    <label for="recipient">Recipient (Hospital):</label>
+                    <input type="text" id="recipient" name="recipient" required>
+                    <button type="submit">Pay</button>
+                </form>
+            </section>
+            <section id="donate" class="section">
+                <h2>Donate</h2>
+                <form id="donate-form">
+                    <label for="donate-amount">Amount (ICP):</label>
+                    <input type="number" id="donate-amount" name="donate-amount" required>
+                    <label for="donate-recipient">Recipient (Hospital/Person):</label>
+                    <input type="text" id="donate-recipient" name="donate-recipient" required>
+                    <button type="submit">Donate</button>
+                </form>
+            </section>
+            <section id="beneficiaries" class="section">
+                <h2>Beneficiaries</h2>
+                <form id="beneficiary-form">
+                    <label for="beneficiary">Add Beneficiary (Family Member):</label>
+                    <input type="text" id="beneficiary" name="beneficiary" required>
+                    <button type="submit">Add</button>
+                </form>
+                <ul id="beneficiary-list"></ul>
+            </section>
+            <section id="savings" class="section">
+                <h2>Monthly Savings</h2>
+                <form id="savings-form">
+                    <label for="savings-amount">Amount to Save (ICP):</label>
+                    <input type="number" id="savings-amount" name="savings-amount" required>
+                    <button type="submit">Set Savings</button>
+                </form>
+            </section>
+            <section id="balance" class="section">
+                <h2>Check Balance</h2>
+                <div id="balance-amount">
+                    <p>Current Balance: <span>1000 ICP</span></p>
+                </div>
+            </section>
+            <button id="depositBtn">Deposit</button>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('nav ul li a');
+            const sections = document.querySelectorAll('.section');
+            const beneficiaryForm = document.getElementById('beneficiary-form');
+            const beneficiaryList = document.getElementById('beneficiary-list');
+            const transactForm = document.getElementById('transact-form');
+            const donateForm = document.getElementById('donate-form');
+            const savingsForm = document.getElementById('savings-form');
+            const balanceAmount = document.getElementById('balance-amount');
+            const depositBtn = document.getElementById('depositBtn');
+
+            // Function to fetch beneficiaries from Motoko backend
+            async function fetchBeneficiaries() {
+                try {
+                    const response = await fetch('/api/getBeneficiaries'); // Replace with actual endpoint
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch beneficiaries');
+                    }
+                    const beneficiaries = await response.json();
+                    displayBeneficiaries(beneficiaries);
+                } catch (error) {
+                    console.error('Error fetching beneficiaries:', error.message);
+                }
+            }
+
+            // Function to display fetched beneficiaries
+            function displayBeneficiaries(beneficiaries) {
+                beneficiaryList.innerHTML = '';
+                beneficiaries.forEach(beneficiary => {
+                    const beneficiaryItem = document.createElement('li');
+                    beneficiaryItem.textContent = beneficiary;
+                    beneficiaryList.appendChild(beneficiaryItem);
+                });
+            }
+
+            // Fetch initial beneficiaries on page load
+            fetchBeneficiaries();
+
+            // Event listeners for navigation links
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href').substring(1); // Get the target section ID from href
+                    const target = document.getElementById(targetId);
+
+                    // Remove 'active' class from all sections
+                    sections.forEach(section => section.classList.remove('active'));
+                    
+                    // Add 'active' class to the target section
+                    target.classList.add('active');
+                });
+            });
+
+            // Event listener for adding a beneficiary
+            beneficiaryForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const beneficiaryInput = document.getElementById('beneficiary');
+                const beneficiaryName = beneficiaryInput.value.trim();
+
+                try {
+                    const response = await fetch('/api/addBeneficiary', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ beneficiary: beneficiaryName }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to add beneficiary');
+                    }
+
+                    const updatedBeneficiaries = await response.json();
+                    displayBeneficiaries(updatedBeneficiaries);
+                    beneficiaryInput.value = '';
+                } catch (error) {
+                    console.error('Error adding beneficiary:', error.message);
+                }
+            });
+
+            // Event listener for transaction form submission
+            transactForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('amount').value);
+                const recipient = document.getElementById('recipient').value.trim();
+
+                try {
+                    const response = await fetch('/api/performTransaction', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ amount, recipient }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to perform transaction');
+                    }
+
+                    const newBalance = await response.json();
+                    balanceAmount.querySelector('span').textContent = `${newBalance} ICP`;
+                    transactForm.reset();
+                } catch (error) {
+                    console.error('Error performing transaction:', error.message);
+                }
+            });
+
+            // Event listener for donation form submission
+            donateForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const donateAmount = parseFloat(document.getElementById('donate-amount').value);
+                const donateRecipient = document.getElementById('donate-recipient').value.trim();
+
+                try {
+                    const response = await fetch('/api/donate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ amount: donateAmount, recipient: donateRecipient }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to donate');
+                    }
+
+                    donateForm.reset();
+                } catch (error) {
+                    console.error('Error donating:', error.message);
+                }
+            });
+
+            // Event listener for savings form submission
+            savingsForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const savingsAmount = parseFloat(document.getElementById('savings-amount').value);
+
+                try {
+                    const response = await fetch('/api/setSavings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ amount: savingsAmount }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to set savings');
+                    }
+
+                    savingsForm.reset();
+                } catch (error) {
+                    console.error('Error setting savings:', error.message);
+                }
+            });
+
+            // Example deposit button event listener
+            depositBtn.addEventListener('click', async function() {
+                try {
+                    const response = await fetch('/api/deposit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ amount: 100 }), // Example deposit amount
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to deposit');
+                    }
+
+                    // Handle success
+                } catch (error) {
+                    console.error('Error depositing:', error.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
